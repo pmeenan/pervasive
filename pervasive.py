@@ -57,7 +57,7 @@ class Collect(object):
         today = date.today()
         year = today.year
         month = today.month
-        for _ in range(12):
+        for _ in range(6):
             month -= 1
             if month == 0:
                 month = 12
@@ -66,8 +66,8 @@ class Collect(object):
         self.current_date = self.dates[0]
         self.bq_client = None
         self.origins = {}
-        self.urls = {}
-        self.patterns = {}
+        self.urls = []
+        self.patterns = []
 
     def process_headers(self, headers):
         result = {}
@@ -145,31 +145,38 @@ class Collect(object):
             if date not in origin[path]:
                 origin[path][date] = {}
             if hash not in origin[path][date]:
-                origin[path][date][hash] = 0
-            origin[path][date][hash] += num
+                origin[path][date][hash] = {'count': 0, 'size': entry['size']}
+            origin[path][date][hash]['count'] += num
 
-    def find_static_urls(self):
+    def find_pervasive_urls(self):
         """ Find URLs that were the same and pervasive for all months """
         for origin in self.origins:
             for path in list(self.origins[origin].keys()):
                 if len(self.origins[origin][path]) == len(self.dates):
                     is_pervasive = True
-                    for date in self.origins[origin][path]:
+                    counts = []
+                    for date in self.dates:
                         total_count = 0
-                        for hash in self.origins[origin][path][date]:
-                            total_count += self.origins[origin][path][date][hash]
+                        if date in self.origins[origin][path]:
+                            for hash in self.origins[origin][path][date]:
+                                total_count += self.origins[origin][path][date][hash]['count']
+                        counts.append(total_count)
                         if total_count < self.pervasive_count:
                             is_pervasive = False
                             break
                     if is_pervasive:
-                        logging.info("Pervasive static URL: %s%s", origin, path)
-                        if origin not in self.urls:
-                            self.urls[origin] = []
-                        if path not in self.urls[origin]:
-                            self.urls[origin].append(path)
+                        logging.info(f"Pervasive static URL {counts}: {origin}{path}")
+                        url = f"{origin}{path}"
+                        if url not in self.urls:
+                            self.urls.append(url)
+                        del self.origins[origin][path]
 
-    def remove_static_resources(self):
-        """ Find URLs that were present in all months and did not change """
+    def remove_static_urls(self):
+        """
+        Find URLs that were present in all months and did not change.
+        We do this after extracting the pervasive ones to make sure we don't use
+        these URLs when generating patterns for the remaining resources.
+        """
         for origin in self.origins:
             for path in list(self.origins[origin].keys()):
                 if len(self.origins[origin][path]) == len(self.dates):
@@ -179,15 +186,23 @@ class Collect(object):
                             if hash not in hashes:
                                 hashes.append(hash)
                     if len(hashes) == 1:
-                        logging.info("Removing static URL: %s%s", origin, path)
+                        logging.info(f"Removing non-pervasive static URL: {origin}{path}")
                         del self.origins[origin][path]
+
+    def find_patterns(self):
+        """
+        Take the remaining requests and see if there are similar urls that
+        are pervasive as a set and automate generating a pattern for them.
+        """
+        pass
 
     def aggregate_urls(self):
         """ Load the raw results and group them by origin """
         for date in self.dates:
             self.load_date(date)
-        self.find_static_urls()
-        self.remove_static_resources()
+        self.find_pervasive_urls()
+        self.remove_static_urls()
+        self.find_patterns()
 
     def run(self):
         self.collect_raw_data()
