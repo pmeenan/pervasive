@@ -3,6 +3,8 @@
 from datetime import date,datetime,timezone
 from google.cloud import bigquery
 from urllib.parse import urlparse
+import difflib
+import fnmatch
 import logging
 import os
 import pandas as pd
@@ -10,6 +12,12 @@ try:
     import ujson as json
 except BaseException:
     import json
+
+MAX_URL_LENGTH = 200
+BLOCKLIST = ['chunk']
+SIZE_MATCH_PERCENT = 5
+MONTHS = 6
+MIN_STABLE_PATH = 2
 
 class Collect(object):
     def __init__(self):
@@ -57,7 +65,7 @@ class Collect(object):
         today = date.today()
         year = today.year
         month = today.month
-        for _ in range(6):
+        for _ in range(MONTHS):
             month -= 1
             if month == 0:
                 month = 12
@@ -68,6 +76,7 @@ class Collect(object):
         self.origins = {}
         self.urls = []
         self.patterns = []
+        self.destinations = {}
 
     def process_headers(self, headers):
         result = {}
@@ -142,6 +151,7 @@ class Collect(object):
             origin = self.origins[origin_str]
             if path not in origin:
                 origin[path] = {}
+                self.destinations[url] = entry['dest']
             if date not in origin[path]:
                 origin[path][date] = {}
             if hash not in origin[path][date]:
@@ -202,11 +212,91 @@ class Collect(object):
                     logging.debug(f"Removed unversioned URL: {origin}{path}")
                     del self.origins[origin][path]
 
+    def remove_blocked_urls(self):
+        """ Remove any URLs that have a blocked string in their filename component """
+        for origin in self.origins:
+            for path in list(self.origins[origin].keys()):
+                filepart = path.split("/")[-1]
+                if self.is_blocked(filepart):
+                    logging.debug(f"Removed blocked URL: {origin}{path}")
+                    del self.origins[origin][path]
+
+    def remove_long_urls(self):
+        """ Remove any URLs longer than 200 characters """
+        for origin in self.origins:
+            for path in list(self.origins[origin].keys()):
+                if len(f"{origin}{path}") > MAX_URL_LENGTH:
+                    logging.debug(f"Removed long URL: {origin}{path}")
+                    del self.origins[origin][path]
+
+
     def find_first_difference(self, str1, str2):
         for index, (char1, char2) in enumerate(zip(str1, str2)):
             if char1 != char2:
                 return index
         return None
+
+    def create_filename_pattern(self, path, candidates):
+        """ Create a wildcard that will match the filenames given as selectively as possible """
+        common = None
+        last = None
+        first = None
+        file = path.split('/')[-1]
+        for p in candidates:
+            f = p.split('/')[-1]
+            if f != file:
+                s = difflib.SequenceMatcher(None, file, f)
+                matches = s.get_matching_blocks()
+                if common == None:
+                    common = []
+                    for match in matches:
+                        start, _, size = match
+                        if size > 0:
+                            end = start + size
+                            if first == None or start < first:
+                                first = start
+                            if last == None or end > last:
+                                last = end
+                            common.append((start, end))
+                else:
+                    # Only include the intersection of both match sets
+                    intersect = []
+                    last = None
+                    first = None
+                    for match in matches:
+                        start, _, size = match
+                        if size > 0:
+                            end = start + size
+                            for cmatch in common:
+                                cstart, cend = cmatch
+                                s = max(start, cstart)
+                                e = min(end, cend)
+                                if s < e:
+                                    if first == None or s < first:
+                                        first = s
+                                    if last == None or e > last:
+                                        last = e
+                                    intersect.append((s, e))
+                    common = intersect
+        if common is None:
+            return None
+        if not common:
+            return "*"
+        pattern = ""
+        if first != 0:
+            pattern += "*"
+        is_first = True
+        for chunk in common:
+            start, end = chunk
+            if not is_first and (not pattern or pattern[-1] != "*"):
+                pattern += "*"
+            is_first = False
+            part = file[start:end].strip("1234567890.-")
+            if len(part) > 1:
+                pattern += part
+        if last != len(file):
+            pattern += "*"
+        return pattern
 
     def find_path_pattern(self, origin, path, candidates):
         """
@@ -222,23 +312,60 @@ class Collect(object):
             for index in range(len(path_parts)):
                 if path_parts[index] != candidate_parts[index] and index not in differences:
                     differences.append(index)
-        if len(differences) == 1 and differences[0] != len(path_parts) - 1:
-            pattern = path.replace(path_parts[differences[0]], "*")
+        differences.sort()
+
+        if not differences:
+            return None
+        
+        # The case where a small number of path segments differ and the filename is the same
+        filename_matches = differences[-1] != len(path_parts) - 1
+        if len(path_parts) - len(differences) > MIN_STABLE_PATH and filename_matches:
+            pattern = path
+            for diff in differences:
+                pattern = pattern.replace(f"/{path_parts[diff]}/", "/*/")
             return pattern
+        # Special-case a single difference
+        if len(differences) == 1 and differences[0] != len(path_parts) - 1:
+            pattern = path.replace(f"/{path_parts[differences[0]]}/", "/*/")
+            return pattern
+        # The case where the file name differs and, optionally, one path segment
+        if differences and len(differences) <= 2 and differences[-1] == len(path_parts) - 1:
+            filename_pattern = self.create_filename_pattern(path, candidates)
+            if filename_pattern is not None:
+                pattern = path.replace(f"/{path_parts[differences[0]]}/", "/*/")
+                pattern = pattern.replace(f"/{path_parts[differences[-1]]}", f"/{filename_pattern}")
+                return pattern
+        return None
+
+    def matches_existing_pattern(self, url):
+        """ See if the given URL matches a pattern we already have """
+        if url in self.urls:
+            return True
+        for pattern in self.patterns:
+            if fnmatch.fnmatch(url, pattern):
+                return True
+            
+        return False
+
+    def is_blocked(self, path):
+        """ Check to see if the file component of the path has any of the blocked strings in it. """
+        file = path.split('/')[-1]
+        for block in BLOCKLIST:
+            if block in file:
+                return True
+        return False
 
     def find_patterns(self):
         """
         Take the remaining requests and see if there are similar urls that
         are pervasive as a set and automate generating a pattern for them.
         """
-        import difflib
-        import fnmatch
         for origin in self.origins:
             o = self.origins[origin]
-            used_paths = []
             for path in list(o.keys()):
-                if path in o and self.current_date in o[path] and path not in used_paths:
-                    used_paths.append(path)
+                url = f"{origin}{path}"
+                if url in self.destinations and path in o and self.current_date in o[path] and not self.matches_existing_pattern(url):
+                    dest = self.destinations[url]
                     hash = list(o[path][self.current_date].keys())[0]
                     target_size = o[path][self.current_date][hash]['size']
                     path_segments = len(path.split('/'))
@@ -246,53 +373,64 @@ class Collect(object):
                     # with "similar" urls
                     candidates = []
                     for p in list(o.keys()):
-                        if p != path and p not in candidates and len(p.split('/')) == path_segments:
+                        curl = f"{origin}{p}"
+                        cdest = self.destinations[curl] if curl in self.destinations else None
+                        if p != path and p not in candidates and cdest == dest and len(p.split('/')) == path_segments:
                             date = list(o[p].keys())[0]
                             hash = list(o[p][date].keys())[0]
                             size = o[p][date][hash]['size']
-                            if (abs(size - target_size) * 100) / target_size < 5:
+                            if (abs(size - target_size) * 100) / target_size <= SIZE_MATCH_PERCENT:
                                 candidates.append(p)
-                                used_paths.append(p)
-                    pattern = self.find_path_pattern(origin, path, candidates)
-                    if pattern:
-                        # Make sure the aggregate of all of the candidates meet the pervasive threshold
-                        matched_urls = []
-                        counts = []
-                        is_pervasive = True
-                        for date in self.dates:
-                            total_count = 0
-                            for p in o:
-                                if fnmatch.fnmatch(p, pattern):
-                                    matched_urls.append(p)
-                                    if date in o[p]:
-                                        hash = list(o[p][date].keys())[0]
-                                        total_count += o[p][date][hash]['count']
-                            counts.append(total_count)
-                            if total_count < self.pervasive_count:
-                                is_pervasive = False
-                        if is_pervasive:
-                            logging.info(f"Pattern {counts}: {origin}{pattern}")
-                            self.patterns.append(pattern)
-                        # clean up all of the paths that were used with the pattern
-                        for path in matched_urls:
-                            if path in o:
-                                del o[path]
-                        continue
+                    if candidates:
+                        pattern = self.find_path_pattern(origin, path, candidates)
+                        if pattern:
+                            # Make sure the aggregate of all of the candidates meet the pervasive threshold
+                            matched_urls = []
+                            counts = []
+                            is_pervasive = True
+                            for date in self.dates:
+                                total_count = 0
+                                for p in o:
+                                    if fnmatch.fnmatch(p, pattern):
+                                        matched_urls.append(p)
+                                        if date in o[p]:
+                                            hash = list(o[p][date].keys())[0]
+                                            total_count += o[p][date][hash]['count']
+                                counts.append(total_count)
+                                if total_count < self.pervasive_count:
+                                    is_pervasive = False
+                            if is_pervasive:
+                                logging.info(f"Pattern {counts}: {origin}{pattern}")
+                                self.patterns.append(f"{origin}{pattern}")
+                            # clean up all of the paths that were used with the pattern
+                            for path in matched_urls:
+                                if path in o:
+                                    del o[path]
+                            continue
 
     def show_unmatched(self):
         """ Display the remaining unmatched URLs """
         for origin in self.origins:
-            for path in self.origins[origin]:
+            for path in sorted(list(self.origins[origin].keys())):
                 if self.current_date in self.origins[origin][path]:
-                    logging.info(f"Unmatched URL: {origin}{path}")
+                    counts = []
+                    for date in self.dates:
+                        total_count = 0
+                        if date in self.origins[origin][path]:
+                            for hash in self.origins[origin][path][date]:
+                                total_count += self.origins[origin][path][date][hash]['count']
+                        counts.append(total_count)
+                    logging.info(f"Unmatched URL {counts}: {origin}{path}")
 
     def aggregate_urls(self):
         """ Load the raw results and group them by origin """
         for date in self.dates:
             self.load_date(date)
         self.find_pervasive_urls()
+        self.remove_long_urls()
         self.remove_static_urls()
         self.remove_unversioned_urls()
+        self.remove_blocked_urls()
         self.find_patterns()
         self.show_unmatched()
 
