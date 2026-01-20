@@ -1,29 +1,30 @@
 #!/usr/bin/env python3
 # Copyright 2025 Google Inc.
-from datetime import date,datetime,timezone
+from datetime import date
 from google.cloud import bigquery
 from urllib.parse import urlparse
+import calendar
 import difflib
-import fnmatch
 import logging
 import os
 import pandas as pd
+import re
 try:
     import ujson as json
 except BaseException:
     import json
 
-PERVASIVE_COUNT = 100000
-MAX_URL_LENGTH = 200
-SIZE_MATCH_PERCENT = 5
-MONTHS = 6
-MIN_STABLE_PATH = 2
+PERVASIVE_COUNT = 100000    # Minimum number of ovvurrences per month to be considered "pervasive"
+MAX_URL_LENGTH = 200        # Longest URL to include
+SIZE_MATCH_PERCENT = 5      # File sizes to consider as "similar" across URLs
+MONTHS = 6                  # Number of Months to evaluate
+MIN_STABLE_PATH = 2         # Minimum number of path components that must match
 MIN_FILENAME_RATIO = 0.5    # difflib.ratio() similarity in filenames when looking for matching candidates
 MAX_FILENAME_MATCHING_BLOCKS = 3    # difflib.find_matching_blocks() maximum number of matching blocks to consider filenames "similar" (including the ending dummy block)
-MAX_FILENAME_LENGTH_DIFFERENCE = 2
-BLOCKLIST = ['chunk']
-WILDCARD_REPLACE = ['en_US']
-FILENAME_IGNORE = ['.js', '.css', '.bundle']
+MAX_FILENAME_LENGTH_DIFFERENCE = 2  # Don't allow for filenames to be similar if their length differs by more than X characters
+BLOCKLIST = ['chunk']           # Don't include filenames with these strings
+WILDCARD_REPLACE = ['en_US']    # Strings that should be replaced with a wildcard automatically
+FILENAME_IGNORE = ['.js', '.css', 'bundle', '.min', '.', '-', '[', ']']  # Strings to ignore when comparing file names for similarity
 
 class Collect(object):
     def __init__(self):
@@ -70,18 +71,44 @@ class Collect(object):
         today = date.today()
         year = today.year
         month = today.month
-        for _ in range(MONTHS):
+        # Start with the current month after the 20th of the month
+        if not self.is_current_crawl_done():
             month -= 1
+        for _ in range(MONTHS):
             if month == 0:
                 month = 12
                 year -= 1
             self.dates.append('{}-{:02d}'.format(year, month))
+            month -= 1
         self.current_date = self.dates[0]
         self.bq_client = None
         self.origins = {}
-        self.urls = []
         self.patterns = []
         self.destinations = {}
+
+    def url_matches_pattern(self, url, pattern):
+        """ See if the given URL matches the provided wildcard pattern. """
+        if "*" not in pattern:
+            return url == pattern
+        pat = re.escape(pattern)
+        pat = pat.replace("\\*", ".*")
+        match = re.fullmatch(pat, url)
+        return match is not None
+
+    def is_current_crawl_done(self):
+        """ The crawl starts on the second tuesday of the month. It should be done by the third. """
+        today = date.today()
+        year = today.year
+        month = today.month
+
+        # The third Tuesday will always fall between the 15th and the 21st (inclusive)
+        # because the first Tuesday can be as early as the 1st, and the latest 
+        # the second Tuesday can be is the 14th of the month.
+        for day in range(15, 22):
+            third_tuesday = date(year, month, day)
+            if third_tuesday.weekday() == calendar.TUESDAY:
+                break
+        return today <= third_tuesday
 
     def process_headers(self, headers):
         result = {}
@@ -182,8 +209,8 @@ class Collect(object):
                     if is_pervasive:
                         logging.info(f"Pervasive static URL {counts}: {origin}{path}")
                         url = f"{origin}{path}"
-                        if url not in self.urls:
-                            self.urls.append(url)
+                        if url not in self.patterns:
+                            self.patterns.append(url)
                         del self.origins[origin][path]
 
     def remove_static_urls(self):
@@ -347,12 +374,11 @@ class Collect(object):
 
     def matches_existing_pattern(self, url):
         """ See if the given URL matches a pattern we already have """
-        if url in self.urls:
+        if url in self.patterns:
             return True
         for pattern in self.patterns:
-            if fnmatch.fnmatch(url, pattern):
+            if self.url_matches_pattern(url, pattern):
                 return True
-            
         return False
 
     def is_blocked(self, path):
@@ -427,7 +453,7 @@ class Collect(object):
                             for date in self.dates:
                                 total_count = 0
                                 for p in o:
-                                    if fnmatch.fnmatch(p, pattern):
+                                    if self.url_matches_pattern(p, pattern):
                                         matched_urls.append(p)
                                         if date in o[p]:
                                             hash = list(o[p][date].keys())[0]
@@ -463,6 +489,25 @@ class Collect(object):
                         counts.append(total_count)
                     logging.info(f"Unmatched URL {counts}: {origin}{path}")
 
+    def write_patterns(self):
+        """ Write the patterns to disk """
+        patterns_file = os.path.join(os.path.dirname(__file__), 'patterns.txt')
+        with open(patterns_file, "w", encoding="utf-8") as f:
+            for pattern in self.patterns:
+                f.write(pattern)
+                f.write("\n")
+
+    def remove_duplicate_patterns(self):
+        """ Remove patterns that are already covered by a more general (shorter) pattern """
+        for pattern1 in list(self.patterns):
+            for pattern2 in list(self.patterns):
+                if pattern1 != pattern2 and len(pattern1) != len(pattern2):
+                    shorter = pattern1 if len(pattern1) < len(pattern2) else pattern2
+                    longer = pattern1 if len(pattern1) > len(pattern2) else pattern2
+                    if self.url_matches_pattern(longer, shorter):
+                        logging.info(f"Removed pattern {longer} as duplicate of {shorter}")
+                        self.patterns.remove(longer)
+
     def aggregate_urls(self):
         """ Load the raw results and group them by origin """
         for date in self.dates:
@@ -473,7 +518,10 @@ class Collect(object):
         self.remove_unversioned_urls()
         self.remove_blocked_urls()
         self.find_patterns()
+        self.remove_duplicate_patterns()
         self.show_unmatched()
+        self.patterns.sort()
+        self.write_patterns()
 
     def run(self):
         self.collect_raw_data()
