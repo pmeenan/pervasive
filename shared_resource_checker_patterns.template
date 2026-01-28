@@ -20,9 +20,12 @@ inline constexpr base::Time::Exploded kPervasivePatternsExpiration = {
     .month = $month,
     .day_of_month = $day};
 
-// List of pervasive resource URL patterns.
-inline constexpr char kPervasivePatterns[] =
-$patterns;
+// The uncompressed list of URL patterns is:
+$patterns_comment
+
+// Zstd-compressed list of pervasive resource URL patterns.
+inline constexpr uint8_t kPervasivePatternsZstd[] = {
+$patterns_zstd};
 
 }  // namespace network::internal
 

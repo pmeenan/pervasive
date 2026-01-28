@@ -12,6 +12,7 @@ import os
 import pandas as pd
 import re
 import string
+import zstandard as zstd
 try:
   import ujson as json
 except BaseException:
@@ -51,6 +52,9 @@ WILDCARD_REPLACE = ['en_US']
 
 # Strings to ignore when comparing file names for similarity
 FILENAME_IGNORE = ['.js', '.css', 'bundle', '.min', '.', '-', '[', ']']
+
+# Compression level for the inline zstd-compressed pervasive list
+ZSTD_COMPRESSION_LEVEL = 19
 
 
 class Collect(object):
@@ -558,20 +562,35 @@ class Collect(object):
       template_string = f.read()
     template = string.Template(template_string)
     expires = date.today() + relativedelta(years=1)
-    patterns = ""
-    is_first = True
+    patterns_comment = ""
     for pattern in self.patterns:
-      escaped = pattern.replace("\\", "\\\\")
-      if not is_first:
-        patterns += "\n"
-      is_first = False
-      patterns += f"    \"{escaped}\\n\""
-    if not patterns:
-      patterns = '""'
+      patterns_comment += f"// {pattern}\n"
+    patterns_comment = patterns_comment.strip()
+    patterns = "\n".join(self.patterns).strip()
+    cctx = zstd.ZstdCompressor(level=ZSTD_COMPRESSION_LEVEL)
+    compressed_data = cctx.compress(patterns.encode('utf-8'))
+    patterns_zstd = ""
+    # Generate a c++ hex byte array with 12 bytes per line
+    is_first = True
+    row_index = 0
+    for b in compressed_data:
+      if is_first:
+        patterns_zstd += "    "
+        is_first = False
+      elif row_index == 0:
+        patterns_zstd += ",\n    "
+      else:
+        patterns_zstd += ", "
+      patterns_zstd += f"0x{b:02x}"
+      row_index += 1
+      if row_index == 12:
+        row_index = 0
+
     out = template.substitute(year=expires.year,
                               month=expires.month,
                               day=expires.day,
-                              patterns=patterns)
+                              patterns_comment=patterns_comment,
+                              patterns_zstd=patterns_zstd)
     with open(cc_file, "w", encoding="utf-8") as f:
       f.write(out)
 
