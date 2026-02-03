@@ -206,8 +206,3 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 .vscode/launch.json
-
-# Data files
-data/
-patterns.txt
-shared_resource_checker_patterns.h
