@@ -16,6 +16,10 @@ https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js
 https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 https://analytics.tiktok.com/i18n/pixel/static/identify_*.js
 https://assets.squarespace.com/@sqs/polyfiller/1.6/modern.js
+https://assets.squarespace.com/universal/scripts-compressed/99209-ed42d6036eafac89-min.en-US.js
+https://assets.squarespace.com/universal/scripts-compressed/common-vendors-stable-fbd854d40b0804b7-min.en-US.js
+https://assets.squarespace.com/universal/scripts-compressed/extract-css-moment-js-vendor-6f2a1f6ec9a41489-min.en-US.js
+https://assets.squarespace.com/universal/styles-compressed/e237edef00ae5990-min.en-US.css
 https://assets.squarespace.com/universal/styles-compressed/popup-overlay-b742b752f5880972-min.en-US.css
 https://browser.sentry-cdn.com/7.120.3/bundle.tracing.es5.min.js
 https://browser.sentry-cdn.com/7.120.3/modulemetadata.es5.min.js
@@ -32,6 +36,7 @@ https://cdn.jsdelivr.net/npm/search-insights@2.2.1
 https://cdn.jsdelivr.net/npm/slick-carousel@1.8.1/slick/slick.min.js
 https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css
 https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js
+https://cdn.shopify.com/extensions/*/assets/index.js
 https://cdn.shopify.com/extensions/*/assets/pagefly-general-helper.js
 https://cdn.shopify.com/extensions/*/assets/pagefly-glider.js
 https://cdn.shopify.com/extensions/*/assets/pagefly-helper.js
@@ -45,6 +50,7 @@ https://cdn.shopify.com/extensions/*/assets/shopifyChatV1Widget.js
 https://cdn.shopify.com/extensions/*/assets/style.css
 https://cdn.shopify.com/shopifycloud/arrive-server/pay/vite-pay/assets/AnalyticsProvider-*.js
 https://cdn.shopify.com/shopifycloud/arrive-server/pay/vite-pay/assets/constants-*.js
+https://cdn.shopify.com/shopifycloud/arrive-server/pay/vite-pay/assets/jsxRuntime.module-*.js
 https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js
 https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css
 https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css
@@ -67,6 +73,7 @@ https://img1.wsimg.com/blobby/go/static/radpack/@widget/LAYOUT/c/bs-defaultSocia
 https://img1.wsimg.com/blobby/go/static/radpack/@wsb/guac-widget-shared/lib/components/Carousel-7574d33c.js
 https://img1.wsimg.com/blobby/go/static/radpack/@wsb/guac-widget-shared/lib/components/DynamicFontScaler-6cccd626.js
 https://invitejs.trustpilot.com/tp.min.js
+https://m.stripe.network/out-4.5.45.js
 https://maps.google.com/maps-api-v3/api/js/*/common.js
 https://maps.google.com/maps-api-v3/api/js/*/util.js
 https://maps.googleapis.com/maps-api-v3/api/js/*/common.js
@@ -81,10 +88,8 @@ https://maps.googleapis.com/maps-api-v3/api/js/*/map.js
 https://maps.googleapis.com/maps-api-v3/api/js/*/marker.js
 https://maps.googleapis.com/maps-api-v3/api/js/*/onion.js
 https://maps.googleapis.com/maps-api-v3/api/js/*/overlay.js
-https://maps.googleapis.com/maps-api-v3/api/js/*/places_impl.js
 https://maps.googleapis.com/maps-api-v3/api/js/*/search.js
 https://maps.googleapis.com/maps-api-v3/api/js/*/search_impl.js
-https://maps.gstatic.com/maps-api-v3/embed/js/*/init_embed.js
 https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css
 https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js
 https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css
@@ -99,6 +104,7 @@ https://platform.twitter.com/widgets.js
 https://s.yimg.jp/images/listing/tool/cv/ytag.js
 https://s3.amazonaws.com/downloads.mailchimp.com/js/mc-validate.js
 https://sc-static.net/scevent.min.js
+https://script.4dex.io/a/latest/adagio.js
 https://script.crazyegg.com/pages/scripts/0129/6552.js
 https://script.wikia.nocookie.net/fandom-ae-assets/identity-service/latest/index.js
 https://scripts.clarity.ms/*/clarity.js
@@ -115,18 +121,16 @@ https://static.criteo.net/js/ld/publishertag.ids.js
 https://static.parastorage.com/services/chat-widget/*/chat-widget.bundle.min.js
 https://static.parastorage.com/services/chat-widget/*/chat-widget.min.css
 https://static.parastorage.com/services/cookie-consent-banner-for-uou/1.819.0//app.bundle.min.js
-https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[ClassicSection].*.bundle.min.js
+https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[*Section].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[Container_DefaultAreaSkin].*.bundle.min.js
-https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[Container_ResponsiveBox].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[FooterContainer_DefaultWithFillLayers].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[GoogleMap].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[HeaderContainer_DefaultWithFillLayers].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[HtmlComponent].*.bundle.min.js
+https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[LanguageSelector].b*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[LoginSocialBar].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[MenuContainer_Classic].*.bundle.min.js
-https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[QuickActionBar_anchoredSkin].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[QuickActionBar_floatingSkin].*.bundle.min.js
-https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[SlideShowSlide].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[StripColumnsContainer_Default].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[StylableButton_Default].*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt[TextInput].*.bundle.min.js
@@ -134,7 +138,7 @@ https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt_bootstrap-responsive.*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt_bootstrap.*.bundle.min.js
 https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt_menu.*.bundle.min.js
-https://static.parastorage.com/services/editor-elements-library/dist/thunderbolt/rb_wixui.thunderbolt_mobile.*.bundle.min.js
+https://static.parastorage.com/services/fonts-data/dist/fonts.hz267ac7fkkfb3a18o8z.css
 https://static.parastorage.com/services/fonts-data/dist/wixMadefor.j95mkaziqjnrn77aekr8.css
 https://static.parastorage.com/services/js-sdk/1.640.0/js/wix-private.min.js
 https://static.parastorage.com/services/profile-card-tpa-ooi/*/ProfileCardViewerWidgetNoCss.bundle.min.js
@@ -166,12 +170,13 @@ https://tpc.googlesyndication.com/pagead/js/*/r20110914/client/qs_click_protecti
 https://tpc.googlesyndication.com/pagead/js/*/r20110914/client/window_focus_fy2021.js
 https://tpc.googlesyndication.com/pagead/js/*/r20110914/elements/html/fullscreen_api_adapter_fy2021.js
 https://tpc.googlesyndication.com/pagead/js/*/r20110914/elements/html/interstitial_ad_frame_fy2021.js
+https://translate.googleapis.com/_/translate_http/_/js/*/d=1/exm=el_conf/ed=1/*/m=el_main
 https://unpkg.com/aos@2.3.1/dist/aos.css
 https://unpkg.com/aos@2.3.1/dist/aos.js
+https://www.blogger.com/static/v1/v-css/828616780-lightbox_bundle.css
 https://www.google-analytics.com/analytics.js
 https://www.google-analytics.com/ga.js
 https://www.google-analytics.com/plugins/ua/ec.js
-https://www.google.com/cse/static/style/look/v4/default.css
 https://www.gstatic.com/_/translate_http/_/ss/*/d=0/*/m=el_main_css
 https://www.gstatic.com/call-tracking/call-tracking_9.js
 https://www.gstatic.com/charts/loader.js
@@ -186,7 +191,7 @@ https://www.youtube.com/s/*/embed_ui_css.css
 https://www.youtube.com/s/player/*/base.js
 https://www.youtube.com/s/player/*/captions.js
 https://www.youtube.com/s/player/*/embed.js
-https://www.youtube.com/s/player/*/player_ias.vflset/*/endscreen.js
+https://www.youtube.com/s/player/*/endscreen.js
 https://www.youtube.com/s/player/*/remote.js
 https://www.youtube.com/s/player/*/www-player.css
 https://www.youtube.com/s/player/*/www-widgetapi.vflset/www-widgetapi.js
